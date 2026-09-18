@@ -56,6 +56,19 @@ print(model.generate(model.clamp(v, rating="1"), seed=0))
 
 `model.beliefs(v)` returns the converged belief vector `H` (the concatenated mean-field means) if you want to inspect or reuse it directly.
 
+### The text prompt
+
+Without `prompt=`, `generate()` uses the one-shot prompt layout from the paper: an instruction naming the domain, one example review, and the task's product name, price and average rating. The released checkpoints ship a synthetic, author-written example review and a generic product (both in `config.json`, under `prompt`), not real Amazon data. You can set the task fields and replace any part of the example:
+
+```python
+model.generate(v, product_name="Unlocked Android Smartphone, 256GB", price=449.99, seed=0)
+model.generate(v, example={"review": "Your own example review."}, seed=0)  # merged over the default example
+print(model.default_prompt(price=449.99))   # the prompt generate() would use
+model.generate(v, prompt="...your full prompt...")  # used verbatim
+```
+
+The average rating stays at 3.0 by default: the training table had no average-rating field, so every training prompt showed 3.0. Numeric prices are shown as Python floats (`$25.0`, `$199.99`), as during training.
+
 ## Attribute schema
 
 The DBM's visible layer is a flat binary vector, but you never address it by index. `feature_spec.json` records, for every attribute group, which visible units it owns, the label of each unit, whether the group is one-hot or multi-label, and its modal value in the training data.

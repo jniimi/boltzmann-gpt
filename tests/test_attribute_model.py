@@ -198,3 +198,122 @@ def test_wrong_visible_dim_raises(model):
 
 def test_default_prompt_substitutes_domain(model):
     assert "About test." in model.default_prompt()
+
+
+# -- one-shot default prompt ----------------------------------------------
+
+ONE_SHOT_TEMPLATE = (
+    "## Instruction\n"
+    "You are a helpful assistant to generate online review about {domain} in Amazon.\n"
+    "Consider product name, price in dollars, and average rating.\n"
+    "\n"
+    "## Example:\n"
+    "Product name: {example_product_name}\n"
+    "Price: ${example_price}\n"
+    "Average rating: {example_average_rating}\n"
+    "Review: {example_review}\n"
+    "\n"
+    "## Task:\n"
+    "Product name: {product_name}\n"
+    "Price: ${price}\n"
+    "Average rating: {average_rating}\n"
+    "Review:"
+)
+EXAMPLE_FIELDS = {
+    "product_name": "Example Phone, 128GB",
+    "price": 199.99,
+    "average_rating": 3.0,
+    "review": "Works fine. Battery lasts a day.",
+}
+PRODUCT_FIELDS = {"product_name": "Target Phone", "price": 25.0, "average_rating": 3.0}
+
+
+def reference_create_prompt(domain, example_row, target_row):
+    """Reimplementation of the research repo's UnifiedDataset.create_prompt
+    with use_example=True."""
+    tgt_title = str(target_row.get("product_name", "Unknown Product"))
+    tgt_price = target_row.get("price", 0)
+    tgt_rating = target_row.get("overall_average", 3.0)
+    SYSTEM = "## Instruction\n"
+    SYSTEM += f"You are a helpful assistant to generate online review about {domain} in Amazon.\n"
+    SYSTEM += "Consider product name, price in dollars, and average rating.\n"
+    EXAMPLE = "## Example:\n"
+    EXAMPLE += f"Product name: {example_row.get('product_name', 'Unknown Product')}\n"
+    EXAMPLE += f"Price: ${example_row.get('price', 0)}\n"
+    EXAMPLE += f"Average rating: {example_row.get('overall_average', 3.0)}\n"
+    EXAMPLE += f"Review: {example_row.get('text', '')}\n"
+    TASK = "## Task:\n"
+    TASK += f"Product name: {tgt_title}\n"
+    TASK += f"Price: ${tgt_price}\n"
+    TASK += f"Average rating: {tgt_rating}\n"
+    TASK += "Review:"
+    return f"{SYSTEM}\n{EXAMPLE}\n{TASK}"
+
+
+def _with_prompt(model, prompt_cfg):
+    return AttributeModel(
+        model.dbm, model.adapter, model.features,
+        {**model.config, "prompt": prompt_cfg}, device="cpu",
+    )
+
+
+@pytest.fixture(scope="module")
+def one_shot(model):
+    return _with_prompt(model, {
+        "domain": "beauty products",
+        "template": ONE_SHOT_TEMPLATE,
+        "example": EXAMPLE_FIELDS,
+        "product": PRODUCT_FIELDS,
+    })
+
+
+def test_one_shot_matches_create_prompt(one_shot):
+    # training rows had no overall_average column, so the rating fell back to 3.0
+    example_row = {"product_name": EXAMPLE_FIELDS["product_name"],
+                   "price": EXAMPLE_FIELDS["price"], "text": EXAMPLE_FIELDS["review"]}
+    target_row = {"product_name": PRODUCT_FIELDS["product_name"],
+                  "price": PRODUCT_FIELDS["price"]}
+    expected = reference_create_prompt("beauty products", example_row, target_row)
+    assert one_shot.default_prompt() == expected
+
+
+def test_one_shot_price_formatting(one_shot):
+    prompt = one_shot.default_prompt()
+    assert "Price: $199.99\n" in prompt
+    assert "Price: $25.0\n" in prompt
+    # integers are shown as floats, as in the training table
+    assert "Price: $25.0\n" in one_shot.default_prompt(price=25)
+    assert "Average rating: 4.0\n" in one_shot.default_prompt(average_rating=4)
+    assert "Price: $1999.99\n" in one_shot.default_prompt(price=1999.99)
+
+
+def test_one_shot_overrides(one_shot):
+    prompt = one_shot.default_prompt(
+        product_name="Other Cream", price=9.5, example={"review": "Nice."}
+    )
+    expected = reference_create_prompt(
+        "beauty products",
+        {"product_name": EXAMPLE_FIELDS["product_name"],
+         "price": EXAMPLE_FIELDS["price"], "text": "Nice."},
+        {"product_name": "Other Cream", "price": 9.5},
+    )
+    assert prompt == expected
+    # the config defaults are not mutated
+    assert "Target Phone" in one_shot.default_prompt()
+    assert "Works fine." in one_shot.default_prompt()
+
+
+def test_one_shot_missing_field_raises(model):
+    m = _with_prompt(model, {"domain": "x", "template": ONE_SHOT_TEMPLATE,
+                             "example": EXAMPLE_FIELDS})
+    with pytest.raises(ValueError, match="product_name"):
+        m.default_prompt()
+    assert "Product name: Given\n" in m.default_prompt(
+        product_name="Given", price=1.0, average_rating=3.0
+    )
+
+
+def test_zero_shot_config_ignores_fields(model):
+    # old configs: the template has only {domain}
+    assert model.default_prompt(product_name="X", price=1.0) == model.default_prompt()
+    assert model.default_prompt() == "## Instruction\nAbout test.\nReview:"

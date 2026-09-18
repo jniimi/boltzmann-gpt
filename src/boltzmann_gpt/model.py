@@ -9,6 +9,7 @@ is never modified.
 from __future__ import annotations
 
 import json
+import string
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Union
 
@@ -24,6 +25,17 @@ DBM_FILE = "dbm.safetensors"
 ADAPTER_FILE = "adapter.safetensors"
 
 DEFAULT_LLM_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+
+# Task fields of the one-shot prompt; the example also has ``review``.
+_PROMPT_FIELDS = ("product_name", "price", "average_rating")
+
+
+def _as_prompt_value(name: str, value: Any) -> Any:
+    """Show numeric prices and ratings as floats, as the training prompts did."""
+    numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
+    if numeric and name.endswith(("price", "average_rating")):
+        return float(value)
+    return value
 
 
 def select_device(device: Optional[Union[str, torch.device]] = None) -> torch.device:
@@ -241,15 +253,62 @@ class AttributeModel:
             return llm.model.embed_tokens
         raise ValueError(f"Cannot find the embedding layer of {type(llm).__name__}")
 
-    def default_prompt(self) -> str:
-        """The text prompt used when ``generate`` is called without one."""
+    def default_prompt(
+        self,
+        product_name: Optional[str] = None,
+        price: Optional[Union[float, str]] = None,
+        average_rating: Optional[Union[float, str]] = None,
+        example: Optional[Mapping[str, Any]] = None,
+    ) -> str:
+        """The text prompt used when ``generate`` is called without one.
+
+        The released checkpoints ship the paper's one-shot prompt: an
+        instruction, one example review, and the task fields. ``product_name``,
+        ``price`` and ``average_rating`` fill the task and default to
+        ``config["prompt"]["product"]``; ``example`` is a dict with any of
+        ``product_name``/``price``/``average_rating``/``review`` merged over
+        ``config["prompt"]["example"]``. Numeric prices and ratings are shown
+        as floats (``25`` -> ``$25.0``), as in training. A template with only a
+        ``{domain}`` placeholder (older zero-shot configs) ignores these fields.
+        """
         prompt_cfg = self.config.get("prompt", {})
         template = prompt_cfg.get("template")
         if template is None:
             raise ValueError(
                 "This checkpoint has no prompt template; pass prompt=... to generate()."
             )
-        return template.format(domain=prompt_cfg.get("domain", self.features.domain))
+
+        product = dict(prompt_cfg.get("product") or {})
+        for key, value in (
+            ("product_name", product_name),
+            ("price", price),
+            ("average_rating", average_rating),
+        ):
+            if value is not None:
+                product[key] = value
+        ex = dict(prompt_cfg.get("example") or {})
+        ex.update(example or {})
+
+        values: Dict[str, Any] = {
+            "domain": prompt_cfg.get("domain", self.features.domain)
+        }
+        for key in _PROMPT_FIELDS:
+            values[key] = product.get(key)
+            values[f"example_{key}"] = ex.get(key)
+        values["example_review"] = ex.get("review")
+
+        fields = {
+            name for _, name, _, _ in string.Formatter().parse(template) if name
+        }
+        missing = sorted(name for name in fields if values.get(name) is None)
+        if missing:
+            raise ValueError(
+                f"The prompt template needs {missing}, which are neither passed "
+                "nor set in config['prompt']; pass them or use prompt=... instead."
+            )
+        return template.format(
+            **{name: _as_prompt_value(name, values[name]) for name in fields}
+        )
 
     def generate(
         self,
@@ -258,11 +317,19 @@ class AttributeModel:
         max_new_tokens: int = 100,
         temperature: float = 0.7,
         seed: Optional[int] = None,
+        product_name: Optional[str] = None,
+        price: Optional[Union[float, str]] = None,
+        average_rating: Optional[Union[float, str]] = None,
+        example: Optional[Mapping[str, Any]] = None,
     ) -> str:
         """Render a visible attribute configuration as review text.
 
         The beliefs are re-equilibrated from ``v`` here, so a clamped vector
         takes effect at this point. The generator's weights are frozen.
+
+        Without ``prompt`` the text prompt is ``default_prompt(product_name,
+        price, average_rating, example)``; an explicit ``prompt`` is used
+        verbatim and those fields are ignored.
         """
         v_batch = self._as_batch(v)
         if v_batch.shape[0] != 1:
@@ -275,7 +342,15 @@ class AttributeModel:
         soft = self.soft_prompts(v_batch)
         embed = self._embed_layer()
 
-        text = self.default_prompt() if prompt is None else prompt
+        if prompt is None:
+            text = self.default_prompt(
+                product_name=product_name,
+                price=price,
+                average_rating=average_rating,
+                example=example,
+            )
+        else:
+            text = prompt
         current_ids = tokenizer(text, return_tensors="pt").input_ids.to(self.device)
 
         generated: List[int] = []
