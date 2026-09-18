@@ -2,9 +2,10 @@
 
 An inference-only reference implementation of the architecture in *Energy-Based Attribute Models for Controllable Review Generation with Frozen LLMs*. A Deep Boltzmann Machine (DBM) is trained on binary one-hot attribute features of product reviews and captures the domain's attribute co-occurrence structure; its converged mean-field beliefs are projected by a small MLP adapter into 30 soft-prompt embeddings, which are prepended to a text prompt and rendered as review text by a frozen Qwen2.5-0.5B-Instruct. Because the attribute model is external to the language model and has an energy function, the same checkpoint supports three things a prompt alone does not: scoring the coherence of an arbitrary attribute configuration, clamping individual attributes and re-equilibrating the beliefs before decoding, and doing both without touching the generator's weights or activations.
 
-- Paper: Junichiro Niimi (Meijo University), TMLR.
-- OpenReview: <https://openreview.net/forum?id=pOIFHY4dOJ>
-- The preliminary version of this work circulated as the "Boltzmann GPT" preprint, which is where the package name comes from.
+- 🎓 **Author**: Junichiro Niimi (Meijo University)
+- 📝 **Paper (PDF)**: [https://openreview.net/pdf?id=pOIFHY4dOJ](https://openreview.net/pdf?id=pOIFHY4dOJ)
+- 📚 **Journal**: Transactions on Machine Learning Research (TMLR)
+- 🏫 **OpenReview**: <https://openreview.net/forum?id=pOIFHY4dOJ>
 
 > **Note.** This is a reference implementation released alongside the paper, not the code that produced the paper's results. The paper is the authoritative description of the method; see [Relation to the paper](#relation-to-the-paper).
 
