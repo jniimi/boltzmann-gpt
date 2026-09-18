@@ -82,12 +82,15 @@ class DeepBoltzmannMachine(nn.Module):
 
     @torch.no_grad()
     def energy(self, v: torch.Tensor, n_iter: int = 10) -> torch.Tensor:
-        """Mean-field energy score ``F~(v)``: the expected energy under the
-        converged Bernoulli mean field, without the entropy term.
+        """Mean-field energy score ``F~(v)``, without the entropy term.
 
-        This reproduces ``free_energy()`` of the reference implementation used
-        for both PCD training and evaluation, so scores are comparable with the
-        published ones. Lower is more coherent. Returns shape ``(batch,)``.
+        Every hidden unit is scored against its full mean-field input
+        (bottom-up, top-down and bias), so couplings between hidden layers
+        enter with weight two and the score is not exactly the expected energy
+        under the mean field. It reproduces ``free_energy()`` of the reference
+        implementation, which is the score used for both PCD training and
+        evaluation, so values are comparable with the published ones. Lower is
+        more coherent. Returns shape ``(batch,)``.
         """
         mu = self.mean_field_inference(v, n_iter)
 
