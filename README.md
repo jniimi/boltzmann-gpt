@@ -69,8 +69,6 @@ print(model.default_prompt(price=449.99))   # the prompt generate() would use
 model.generate(v, prompt="...your full prompt...")  # used verbatim
 ```
 
-The average rating stays at 3.0 by default: the training table had no average-rating field, so every training prompt showed 3.0. Numeric prices are shown as Python floats (`$25.0`, `$199.99`), as during training.
-
 ## Attribute schema
 
 The DBM's visible layer is a flat binary vector, but you never address it by index. `feature_spec.json` records, for every attribute group, which visible units it owns, the label of each unit, whether the group is one-hot or multi-label, and its modal value in the training data.
@@ -91,28 +89,32 @@ Two checkpoints are released on the Hugging Face Hub, both from the seed-0 run r
 | [`jniimi/boltzmann-gpt-smartphone`](https://huggingface.co/jniimi/boltzmann-gpt-smartphone) | Smartphone | 160 |
 | [`jniimi/boltzmann-gpt-beauty`](https://huggingface.co/jniimi/boltzmann-gpt-beauty) | Beauty | 170 |
 
-A checkpoint directory holds `config.json`, `feature_spec.json`, `dbm.safetensors` and `adapter.safetensors`. Loading uses safetensors only — this package never reads or writes pickles. If the argument to `from_pretrained` is not an existing directory it is treated as a Hugging Face Hub repo id and fetched with `huggingface_hub`; the frozen generator named in `config.json` is downloaded from the Hub on the first call to `generate()`.
-
-`scripts/export_checkpoint.py` converts the original pickled training artifacts into this format. It is for the author's own files, it warns when it unpickles, and it fails with an explicit message rather than guessing whenever the artifact's structure does not match what it expects. `scripts/write_model_card.py` renders the Hub model card from an exported checkpoint's `config.json` and `feature_spec.json`.
+A checkpoint directory holds `config.json`, `feature_spec.json`, `dbm.safetensors` and `adapter.safetensors`. If the argument to `from_pretrained` is not an existing directory it is treated as a Hugging Face Hub repo id and fetched with `huggingface_hub`; the frozen generator named in `config.json` is downloaded from the Hub on the first call to `generate()`.
 
 ## Scope
 
-This repository is a reference implementation of inference only.
+This repository is a reference implementation of inference only: 
 
-- **Not included:** training code (layer-wise pretraining, PCD joint fine-tuning, adapter training), the baselines and ablations, the evaluation harness, and per-sample experiment outputs.
-- **No data.** The underlying Amazon Reviews 2023 corpus is publicly available from its original source, and the filtering and feature construction are described in the paper's appendix in enough detail to reconstruct the tagged table.
-- **No numbers are restated here.** The paper is the source for every empirical claim about the model.
+Training code (layer-wise pretraining, PCD joint fine-tuning, adapter training), the baselines and ablations, the evaluation harness, and per-sample experiment outputs are not included.
+
+The underlying Amazon Reviews 2023 corpus is publicly available from its original source, and the filtering and feature construction are described in the paper's appendix in enough detail to reconstruct the tagged table.
 
 ### Relation to the paper
 
-The package was reorganized from the original research code for release: the inference path was rewritten around a documented API and a safetensors checkpoint format, and the released weights were exported from the seed-0 training artifacts. The experiments reported in the paper were run with the original research code, not with this package.
+The package was fundamentally recreated for public release. The experiments reported in the paper were run with the original research code, not with this package.
 
-As a consequence, small differences between this implementation and the description in the paper, as well as bugs, are possible. Where the two disagree, the paper is the specification and the discrepancy is a defect of this package. Generated text is also not expected to match the samples in the paper token for token, since sampling depends on library versions and hardware. If you find a discrepancy or a bug, please [open an issue](https://github.com/jniimi/boltzmann-gpt/issues).
+As a consequence, small differences between this implementation and the description in the paper, as well as bugs, are possible. Where the two disagree, the paper is the specification and the discrepancy is a defect of this package. Generated text is also not expected to match the samples in the paper token for token, since sampling depends on library versions and hardware.
 
 ## Responsible use
 
 Everything this package generates is synthetic review text produced by a language model from an attribute configuration. It is not a real customer's opinion and it describes no real purchase. Posting such text as a genuine review is deceptive and is against the terms of every major review platform. If you publish or redistribute generations, disclose that they are model output.
 
+## Authors
+
+Dr. Junichiro Niimi (Meijo Univ., Japan)
+- X: [@jniimi](https://x.com/jniimi)
+- Accepted paper: [OpenReview](https://openreview.net/forum?id=pOIFHY4dOJ)
+
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT ([LICENSE](LICENSE)).

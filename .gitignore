@@ -15,3 +15,6 @@ checkpoints/
 *.safetensors
 *.pkl
 *.parquet
+
+# author-side tools (checkpoint export, model card rendering); kept locally only
+scripts/
