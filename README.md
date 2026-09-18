@@ -6,10 +6,23 @@ An inference-only reference implementation of the architecture in *Energy-Based 
 - OpenReview: <https://openreview.net/forum?id=pOIFHY4dOJ>
 - The preliminary version of this work circulated as the "Boltzmann GPT" preprint, which is where the package name comes from.
 
+### Citation:
+If you use this package, please cite the following:
+```bibtex
+@article{niimi2026energybased,
+    title = {Energy-Based Attribute Models for Controllable Review Generation with Frozen {LLM}s},
+    author = {Junichiro Niimi},
+    journal = {Transactions on Machine Learning Research},
+    issn = {2835-8856},
+    year = {2026},
+    url = {https://openreview.net/forum?id=pOIFHY4dOJ}
+}
+```
+
 ## Install
 
 ```bash
-uv add boltzmann-gpt          # in an existing project
+uv add git+https://github.com/jniimi/boltzmann-gpt   # in an existing project
 # or, from a clone:
 uv sync
 uv run python -c "import boltzmann_gpt; print(boltzmann_gpt.__version__)"
