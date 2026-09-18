@@ -103,8 +103,6 @@ This repository is a reference implementation of inference only.
 - **No data.** The underlying Amazon Reviews 2023 corpus is publicly available from its original source, and the filtering and feature construction are described in the paper's appendix in enough detail to reconstruct the tagged table.
 - **No numbers are restated here.** The paper is the source for every empirical claim about the model.
 
-The DBM is a model of how attributes co-occur in the training domain. It is not a world model and it does not represent causal structure: clamping fixes visible units in the learnt distribution and re-runs mean-field inference, so the resulting shifts reflect model-internal distributional consistency, not identified real-world effects.
-
 ### Relation to the paper
 
 The package was reorganized from the original research code for release: the inference path was rewritten around a documented API and a safetensors checkpoint format, and the released weights were exported from the seed-0 training artifacts. The experiments reported in the paper were run with the original research code, not with this package.
