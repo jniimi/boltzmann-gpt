@@ -6,6 +6,8 @@ An inference-only reference implementation of the architecture in *Energy-Based 
 - OpenReview: <https://openreview.net/forum?id=pOIFHY4dOJ>
 - The preliminary version of this work circulated as the "Boltzmann GPT" preprint, which is where the package name comes from.
 
+> **Note.** This is a reference implementation released alongside the paper, not the code that produced the paper's results. The paper is the authoritative description of the method; see [Relation to the paper](#relation-to-the-paper).
+
 ### Citation:
 If you use this package, please cite the following:
 ```bibtex
@@ -102,6 +104,12 @@ This repository is a reference implementation of inference only.
 - **No numbers are restated here.** The paper is the source for every empirical claim about the model.
 
 The DBM is a model of how attributes co-occur in the training domain. It is not a world model and it does not represent causal structure: clamping fixes visible units in the learnt distribution and re-runs mean-field inference, so the resulting shifts reflect model-internal distributional consistency, not identified real-world effects.
+
+### Relation to the paper
+
+The package was reorganized from the original research code for release: the inference path was rewritten around a documented API and a safetensors checkpoint format, and the released weights were exported from the seed-0 training artifacts. The experiments reported in the paper were run with the original research code, not with this package.
+
+As a consequence, small differences between this implementation and the description in the paper, as well as bugs, are possible. Where the two disagree, the paper is the specification and the discrepancy is a defect of this package. Generated text is also not expected to match the samples in the paper token for token, since sampling depends on library versions and hardware. If you find a discrepancy or a bug, please [open an issue](https://github.com/jniimi/boltzmann-gpt/issues).
 
 ## Responsible use
 
