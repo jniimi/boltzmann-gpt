@@ -1,6 +1,6 @@
 # boltzmann-gpt
 
-An inference-only reference implementation of the architecture in *Energy-Based Attribute Models for Controllable Review Generation with Frozen LLMs*. A Deep Boltzmann Machine (DBM) is trained on binary one-hot attribute features of product reviews and captures the domain's attribute co-occurrence structure; its converged mean-field beliefs are projected by a small MLP adapter into 16 soft-prompt embeddings, which are prepended to a text prompt and rendered as review text by a frozen Qwen2.5-0.5B-Instruct. Because the attribute model is external to the language model and has an energy function, the same checkpoint supports three things a prompt alone does not: scoring the coherence of an arbitrary attribute configuration, clamping individual attributes and re-equilibrating the beliefs before decoding, and doing both without touching the generator's weights or activations.
+An inference-only reference implementation of the architecture in *Energy-Based Attribute Models for Controllable Review Generation with Frozen LLMs*. A Deep Boltzmann Machine (DBM) is trained on binary one-hot attribute features of product reviews and captures the domain's attribute co-occurrence structure; its converged mean-field beliefs are projected by a small MLP adapter into 30 soft-prompt embeddings, which are prepended to a text prompt and rendered as review text by a frozen Qwen2.5-0.5B-Instruct. Because the attribute model is external to the language model and has an energy function, the same checkpoint supports three things a prompt alone does not: scoring the coherence of an arbitrary attribute configuration, clamping individual attributes and re-equilibrating the beliefs before decoding, and doing both without touching the generator's weights or activations.
 
 - Paper: Junichiro Niimi (Meijo University), TMLR.
 - OpenReview: <https://openreview.net/forum?id=pOIFHY4dOJ>
@@ -33,19 +33,20 @@ uv run python -c "import boltzmann_gpt; print(boltzmann_gpt.__version__)"
 ```python
 from boltzmann_gpt import AttributeModel
 
-model = AttributeModel.from_pretrained("path/to/checkpoint")  # or a Hub repo id
+model = AttributeModel.from_pretrained("jniimi/boltzmann-gpt-smartphone")  # or a local checkpoint directory
 
 # The attribute schema: group name -> allowed values.
 model.attributes()
-# {'brand': ['apple', 'samsung', ...], 'rating': ['1', ..., '5'], 'price': [...], ...}
+# {'price': ['Entry', 'Mid', 'High', 'Premium'], 'brand': ['apple', 'asus', ..., 'samsung', ...],
+#  'rating': ['1', '2', '3', '4', '5'], 'topic': ['Battery', 'Screen', ...], ...}
 
 # 1. Encode an attribute configuration. Groups you leave out take their modal
 #    training value, so encode() with no arguments is the default configuration.
-v = model.encode(brand="apple", rating="5", price="Premium")
+v = model.encode(brand="samsung", rating="5", price="Premium", topic=["Camera", "Battery"])
 
 # 2. Coherence. energy() is the mean-field energy score; lower is more coherent.
 print(model.energy(v))
-print(model.energy(model.clamp(v, price="Entry")))   # a premium brand at entry price
+print(model.energy(model.clamp(v, price="Entry")))
 
 # 3. Clamp and generate. clamp() only rewrites the visible units; the beliefs
 #    are re-equilibrated by mean-field inference inside generate().
@@ -68,9 +69,16 @@ Attribute construction (brand vocabularies, price bins, topic lexicons, purchase
 
 ## Checkpoints
 
+Two checkpoints are released on the Hugging Face Hub, both from the seed-0 run reported in the paper:
+
+| Hub repo | Domain | Visible units |
+|---|---|---|
+| [`jniimi/boltzmann-gpt-smartphone`](https://huggingface.co/jniimi/boltzmann-gpt-smartphone) | Smartphone | 160 |
+| [`jniimi/boltzmann-gpt-beauty`](https://huggingface.co/jniimi/boltzmann-gpt-beauty) | Beauty | 170 |
+
 A checkpoint directory holds `config.json`, `feature_spec.json`, `dbm.safetensors` and `adapter.safetensors`. Loading uses safetensors only — this package never reads or writes pickles. If the argument to `from_pretrained` is not an existing directory it is treated as a Hugging Face Hub repo id and fetched with `huggingface_hub`; the frozen generator named in `config.json` is downloaded from the Hub on the first call to `generate()`.
 
-`scripts/export_checkpoint.py` converts the original pickled training artifacts into this format. It is for the author's own files, it warns when it unpickles, and it fails with an explicit message rather than guessing whenever the artifact's structure does not match what it expects.
+`scripts/export_checkpoint.py` converts the original pickled training artifacts into this format. It is for the author's own files, it warns when it unpickles, and it fails with an explicit message rather than guessing whenever the artifact's structure does not match what it expects. `scripts/write_model_card.py` renders the Hub model card from an exported checkpoint's `config.json` and `feature_spec.json`.
 
 ## Scope
 
