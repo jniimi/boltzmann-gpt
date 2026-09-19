@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use this package, please cite the paper below."
+type: software
+title: "boltzmann-gpt"
+abstract: "Inference-only reference implementation of an energy-based attribute model with a frozen-LLM rendering head."
+authors:
+  - family-names: Niimi
+    given-names: Junichiro
+    affiliation: Meijo University
+    orcid: "https://orcid.org/0000-0002-4618-6272"
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/jniimi/boltzmann-gpt"
+keywords:
+  - energy-based-model
+  - deep-boltzmann-machine
+  - controllable-generation
+  - soft-prompt
+preferred-citation:
+  type: article
+  title: "Energy-Based Attribute Models for Controllable Review Generation with Frozen LLMs"
+  authors:
+    - family-names: Niimi
+      given-names: Junichiro
+      affiliation: Meijo University
+      orcid: "https://orcid.org/0000-0002-4618-6272"
+  journal: "Transactions on Machine Learning Research"
+  issn: "2835-8856"
+  year: 2026
+  url: "https://openreview.net/forum?id=pOIFHY4dOJ"
