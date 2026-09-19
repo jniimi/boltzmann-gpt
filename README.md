@@ -1,5 +1,12 @@
 # Boltzmann-GPT
 
+[![Paper](https://img.shields.io/badge/Paper-TMLR-8c1b13)](https://openreview.net/forum?id=pOIFHY4dOJ)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22839529.svg)](https://doi.org/10.5281/zenodo.22839529)
+[![Release](https://img.shields.io/github/v/release/jniimi/boltzmann-gpt)](https://github.com/jniimi/boltzmann-gpt/releases)
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-checkpoints-ffd21e)](https://huggingface.co/jniimi/boltzmann-gpt-smartphone)
+[![Python](https://img.shields.io/badge/python-%E2%89%A53.10-3776ab)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 An inference-only reference implementation of the architecture in *Energy-Based Attribute Models for Controllable Review Generation with Frozen LLMs* (Niimi, 2026; TMLR). 
 
 ---
@@ -10,6 +17,7 @@ A Deep Boltzmann Machine (DBM) is trained on binary one-hot attribute features o
 - 📝 **Paper (PDF)**: [https://openreview.net/pdf?id=pOIFHY4dOJ](https://openreview.net/pdf?id=pOIFHY4dOJ)
 - 📚 **Journal**: Transactions on Machine Learning Research (TMLR)
 - 🏫 **OpenReview**: <https://openreview.net/forum?id=pOIFHY4dOJ>
+- 💾 **Code archive (Zenodo)**: [10.5281/zenodo.22839529](https://doi.org/10.5281/zenodo.22839529)
 
 > **Note.** This is a reference implementation released alongside the paper, not the code that produced the paper's results. The paper is the authoritative description of the method; see [Relation to the paper](#relation-to-the-paper).
 

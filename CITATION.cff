@@ -9,6 +9,7 @@ authors:
     affiliation: Meijo University
     orcid: "https://orcid.org/0000-0002-4618-6272"
 version: 0.1.0
+doi: 10.5281/zenodo.22839529
 license: MIT
 repository-code: "https://github.com/jniimi/boltzmann-gpt"
 keywords:
