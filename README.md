@@ -1,25 +1,10 @@
-# Boltzmann-GPT
+# boltzmann-gpt
 
-[![Paper](https://img.shields.io/badge/Paper-TMLR-8c1b13)](https://openreview.net/forum?id=pOIFHY4dOJ)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22839529.svg)](https://doi.org/10.5281/zenodo.22839529)
-[![Release](https://img.shields.io/github/v/release/jniimi/boltzmann-gpt)](https://github.com/jniimi/boltzmann-gpt/releases)
-[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-checkpoints-ffd21e)](https://huggingface.co/jniimi/boltzmann-gpt-smartphone)
-[![Python](https://img.shields.io/badge/python-%E2%89%A53.10-3776ab)](pyproject.toml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+An inference-only reference implementation of the architecture in *Energy-Based Attribute Models for Controllable Review Generation with Frozen LLMs*. A Deep Boltzmann Machine (DBM) is trained on binary one-hot attribute features of product reviews and captures the domain's attribute co-occurrence structure; its converged mean-field beliefs are projected by a small MLP adapter into 30 soft-prompt embeddings, which are prepended to a text prompt and rendered as review text by a frozen Qwen2.5-0.5B-Instruct. Because the attribute model is external to the language model and has an energy function, the same checkpoint supports three things a prompt alone does not: scoring the coherence of an arbitrary attribute configuration, clamping individual attributes and re-equilibrating the beliefs before decoding, and doing both without touching the generator's weights or activations.
 
-An inference-only reference implementation of the architecture in *Energy-Based Attribute Models for Controllable Review Generation with Frozen LLMs* (Niimi, 2026; TMLR). 
-
----
-
-A Deep Boltzmann Machine (DBM) is trained on binary one-hot attribute features of product reviews and captures the domain's attribute co-occurrence structure; its converged mean-field beliefs are projected by a small MLP adapter into 30 soft-prompt embeddings, which are prepended to a text prompt and rendered as review text by a frozen Qwen2.5-0.5B-Instruct. Because the attribute model is external to the language model and has an energy function, the same checkpoint supports three things a prompt alone does not: scoring the coherence of an arbitrary attribute configuration, clamping individual attributes and re-equilibrating the beliefs before decoding, and doing both without touching the generator's weights or activations.
-
-- 🎓 **Author**: Junichiro Niimi (Meijo University)
-- 📝 **Paper (PDF)**: [https://openreview.net/pdf?id=pOIFHY4dOJ](https://openreview.net/pdf?id=pOIFHY4dOJ)
-- 📚 **Journal**: Transactions on Machine Learning Research (TMLR)
-- 🏫 **OpenReview**: <https://openreview.net/forum?id=pOIFHY4dOJ>
-- 💾 **Code archive (Zenodo)**: [10.5281/zenodo.22839529](https://doi.org/10.5281/zenodo.22839529)
-
-> **Note.** This is a reference implementation released alongside the paper, not the code that produced the paper's results. The paper is the authoritative description of the method; see [Relation to the paper](#relation-to-the-paper).
+- Paper: Junichiro Niimi (Meijo University), TMLR.
+- OpenReview: <https://openreview.net/forum?id=pOIFHY4dOJ>
+- The preliminary version of this work circulated as the "Boltzmann GPT" preprint, which is where the package name comes from.
 
 ### Citation:
 If you use this package, please cite the following:
@@ -82,6 +67,8 @@ print(model.default_prompt(price=449.99))   # the prompt generate() would use
 model.generate(v, prompt="...your full prompt...")  # used verbatim
 ```
 
+The average rating stays at 3.0 by default: the training table had no average-rating field, so every training prompt showed 3.0. Numeric prices are shown as Python floats (`$25.0`, `$199.99`), as during training.
+
 ## Attribute schema
 
 The DBM's visible layer is a flat binary vector, but you never address it by index. `feature_spec.json` records, for every attribute group, which visible units it owns, the label of each unit, whether the group is one-hot or multi-label, and its modal value in the training data.
@@ -102,32 +89,24 @@ Two checkpoints are released on the Hugging Face Hub, both from the seed-0 run r
 | [`jniimi/boltzmann-gpt-smartphone`](https://huggingface.co/jniimi/boltzmann-gpt-smartphone) | Smartphone | 160 |
 | [`jniimi/boltzmann-gpt-beauty`](https://huggingface.co/jniimi/boltzmann-gpt-beauty) | Beauty | 170 |
 
-A checkpoint directory holds `config.json`, `feature_spec.json`, `dbm.safetensors` and `adapter.safetensors`. If the argument to `from_pretrained` is not an existing directory it is treated as a Hugging Face Hub repo id and fetched with `huggingface_hub`; the frozen generator named in `config.json` is downloaded from the Hub on the first call to `generate()`.
+A checkpoint directory holds `config.json`, `feature_spec.json`, `dbm.safetensors` and `adapter.safetensors`. Loading uses safetensors only — this package never reads or writes pickles. If the argument to `from_pretrained` is not an existing directory it is treated as a Hugging Face Hub repo id and fetched with `huggingface_hub`; the frozen generator named in `config.json` is downloaded from the Hub on the first call to `generate()`.
+
+`scripts/export_checkpoint.py` converts the original pickled training artifacts into this format. It is for the author's own files, it warns when it unpickles, and it fails with an explicit message rather than guessing whenever the artifact's structure does not match what it expects. `scripts/write_model_card.py` renders the Hub model card from an exported checkpoint's `config.json` and `feature_spec.json`.
 
 ## Scope
 
-This repository is a reference implementation of inference only: 
+This repository is a reference implementation of inference only.
 
-Training code (layer-wise pretraining, PCD joint fine-tuning, adapter training), the baselines and ablations, the evaluation harness, and per-sample experiment outputs are not included.
+- **Not included:** training code (layer-wise pretraining, PCD joint fine-tuning, adapter training), the baselines and ablations, the evaluation harness, and per-sample experiment outputs.
+- **No data.** The underlying Amazon Reviews 2023 corpus is publicly available from its original source, and the filtering and feature construction are described in the paper's appendix in enough detail to reconstruct the tagged table.
+- **No numbers are restated here.** The paper is the source for every empirical claim about the model.
 
-The underlying Amazon Reviews 2023 corpus is publicly available from its original source, and the filtering and feature construction are described in the paper's appendix in enough detail to reconstruct the tagged table.
-
-### Relation to the paper
-
-The package was fundamentally recreated for public release. The experiments reported in the paper were run with the original research code, not with this package.
-
-As a consequence, small differences between this implementation and the description in the paper, as well as bugs, are possible. Where the two disagree, the paper is the specification and the discrepancy is a defect of this package. Generated text is also not expected to match the samples in the paper token for token, since sampling depends on library versions and hardware.
+The DBM is a model of how attributes co-occur in the training domain. It is not a world model and it does not represent causal structure: clamping fixes visible units in the learnt distribution and re-runs mean-field inference, so the resulting shifts reflect model-internal distributional consistency, not identified real-world effects.
 
 ## Responsible use
 
 Everything this package generates is synthetic review text produced by a language model from an attribute configuration. It is not a real customer's opinion and it describes no real purchase. Posting such text as a genuine review is deceptive and is against the terms of every major review platform. If you publish or redistribute generations, disclose that they are model output.
 
-## Authors
-
-Dr. Junichiro Niimi (Meijo Univ., Japan)
-- X: [@jniimi](https://x.com/jniimi)
-- Accepted paper: [OpenReview](https://openreview.net/forum?id=pOIFHY4dOJ)
-
 ## License
 
-MIT ([LICENSE](LICENSE)).
+MIT. See [LICENSE](LICENSE).
